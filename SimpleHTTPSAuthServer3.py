@@ -111,7 +111,7 @@ if __name__ == '__main__':
         print('Set docroot to %s' % args.docroot)
         os.chdir(args.docroot)
 
-    if args.user == '' and args.password == '' and args.key is None:
+    if not args.noauth and args.user == '' and args.password == '' and args.key is None:
         args.user = random_string(8)
         args.password = random_string(8)
         print('Generated username and password -> %s : %s' % (args.user, args.password))
