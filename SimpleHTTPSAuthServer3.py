@@ -44,8 +44,10 @@ class HTTPSAuthServer(HTTPServer):
     def __init__(self, server_address, RequestHandlerClass=AuthHandler, bind_and_activate=True):
         super().__init__(server_address, RequestHandlerClass, bind_and_activate)
         self.noauth = False
-        self.cert = None
+        self.servercert = None
+        self.cacert = None
         self.protocol = 'HTTP'
+        self.certreqs = ssl.CERT_NONE
 
     def set_noauth(self, noauth):
         self.noauth = noauth
@@ -56,19 +58,29 @@ class HTTPSAuthServer(HTTPServer):
         else:
             self.key = key
 
-    def set_cert(self, cert):
-        self.cert = cert
-        if cert is not None:
+    def set_certs(self, servercert=None, cacert=None):
+        self.servercert = servercert
+        self.cacert = cacert
+
+        if servercert is not None:
             self.protocol = 'HTTPS'
-            self.socket = ssl.wrap_socket(self.socket, certfile=cert, server_side=True)
+            if cacert is not None:
+                self.certreqs = ssl.CERT_REQUIRED
+
+            self.socket = ssl.wrap_socket(self.socket, certfile=servercert,
+                                          server_side=True,
+                                          cert_reqs=self.certreqs,
+                                          ca_certs=self.cacert)
 
     def serve_forever(self, poll_interval=0.5):
-        if self.cert is None:
-            print('No certfile is specified. Dropped to HTTP.')
+        if self.servercert is None:
+            print('No server certificate is specified. Dropped to HTTP.')
+        elif self.cacert is not None:
+            print('CA certificate is specified. Now clients need cilent certificates.')
 
         sockname = self.socket.getsockname()
         print('Serving %s on %s port %s ...' % (self.protocol, sockname[0], sockname[1]))
-        
+
         try:
             super().serve_forever(poll_interval)
         except KeyboardInterrupt:
@@ -76,11 +88,11 @@ class HTTPSAuthServer(HTTPServer):
 
 
 def serve_https(address='', port=8000, noauth=False, user='', password='',
-                key=None, certfile=None, HandlerClass=AuthHandler):
+                key=None, servercert=None, cacert=None, HandlerClass=AuthHandler):
     server = HTTPSAuthServer((address, port), HandlerClass)
     server.set_noauth(noauth)
     server.set_auth(user, password, key)
-    server.set_cert(certfile)
+    server.set_certs(servercert, cacert)
     server.serve_forever()
 
 
@@ -93,19 +105,27 @@ def random_string(length):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='HTTPS server with Basic authentication.')
+    parser = argparse.ArgumentParser(
+        description='An HTTPS server with Basic authentication '
+                    'and client certificate authentication',
+        formatter_class=argparse.RawTextHelpFormatter)
+
     parser.add_argument('port', nargs='?', type=int, default=8000)
     parser.add_argument('-a', '--address', default='')
     parser.add_argument('-n', '--noauth', action='store_true')
     parser.add_argument('-u', '--user', default='')
     parser.add_argument('-p', '--password', default='')
     parser.add_argument('-k', '--key')
-    parser.add_argument('-c', '--cert')
+    parser.add_argument('-s', '--servercert')
+    parser.add_argument('-c', '--cacert')
     parser.add_argument('-d', '--docroot')
     args = parser.parse_args()
 
-    if args.cert is not None:
-        args.cert = os.path.abspath(args.cert)
+    if args.servercert is not None:
+        args.servercert = os.path.abspath(args.servercert)
+
+    if args.cacert is not None:
+        args.cacert = os.path.abspath(args.cacert)
 
     if args.docroot is not None:
         print('Set docroot to %s' % args.docroot)
@@ -116,5 +136,5 @@ if __name__ == '__main__':
         args.password = random_string(8)
         print('Generated username and password -> %s : %s' % (args.user, args.password))
 
-    serve_https(args.address, args.port, args.noauth, args.user, args.password, args.key, args.cert)
-
+    serve_https(args.address, args.port, args.noauth, args.user, args.password,
+                args.key, args.servercert, args.cacert)
