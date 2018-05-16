@@ -1,6 +1,6 @@
 # SimpleHTTPSAuthServer3
 
-HTTPS server with Basic authentication for Python3.
+HTTPS server with Basic authentication and client certificate authentication for Python3.
 
 ## Installation
 ```sh
