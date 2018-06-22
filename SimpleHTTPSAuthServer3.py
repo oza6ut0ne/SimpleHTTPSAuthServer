@@ -1,5 +1,6 @@
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 import base64
+import http
 import os
 import random
 import re
@@ -9,7 +10,7 @@ import string
 
 class AuthHandler(SimpleHTTPRequestHandler):
     def do_AUTHHEAD(self):
-        self.send_response(401)
+        self.send_response(http.client.UNAUTHORIZED)
         self.send_header('WWW-Authenticate', 'Basic realm=\"Authorization Required\"')
         self.send_header('Content-type', 'text/html')
         self.end_headers()
