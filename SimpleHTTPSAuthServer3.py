@@ -15,6 +15,9 @@ class AuthHandler(SimpleHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
+    def do_SUPERGET(self):
+        super().do_GET()
+
     def do_GET(self):
         if self.server.noauth:
             if __name__ == '__main__':
