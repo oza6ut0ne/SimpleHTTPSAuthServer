@@ -1,6 +1,7 @@
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 import base64
 import http
+import itertools
 import os
 import random
 import re
@@ -31,7 +32,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
             print('no auth header received')
             return False
 
-        elif auth_header == 'Basic ' + self.server.key:
+        elif auth_header[len('Basic '):] in self.server.keys:
             if __name__ == '__main__':
                 super().do_GET()
             return True
@@ -56,11 +57,13 @@ class HTTPSAuthServer(HTTPServer):
     def set_noauth(self, noauth):
         self.noauth = noauth
 
-    def set_auth(self, user='', password='', key=None):
-        if key is None:
-            self.key = base64.b64encode(('%s:%s' % (user, password)).encode()).decode()
+    def set_auth(self, users=[''], passwords=[''], keys=None):
+        if keys is None:
+            self.keys= []
+            for user, password in itertools.zip_longest(users, passwords, fillvalue=''):
+                self.keys.append(base64.b64encode(('%s:%s' % (user, password)).encode()).decode())
         else:
-            self.key = key
+            self.keys = keys
 
     def set_certs(self, servercert=None, cacert=None):
         self.servercert = servercert
@@ -91,11 +94,11 @@ class HTTPSAuthServer(HTTPServer):
             pass
 
 
-def serve_https(address='', port=8000, noauth=False, user='', password='',
-                key=None, servercert=None, cacert=None, HandlerClass=AuthHandler):
+def serve_https(address='', port=8000, noauth=False, users=[''], passwords=[''],
+                keys=None, servercert=None, cacert=None, HandlerClass=AuthHandler):
     server = HTTPSAuthServer((address, port), HandlerClass)
     server.set_noauth(noauth)
-    server.set_auth(user, password, key)
+    server.set_auth(users, passwords, keys)
     server.set_certs(servercert, cacert)
     server.serve_forever()
 
@@ -117,9 +120,9 @@ if __name__ == '__main__':
     parser.add_argument('port', nargs='?', type=int, default=8000)
     parser.add_argument('-a', '--address', default='')
     parser.add_argument('-n', '--noauth', action='store_true')
-    parser.add_argument('-u', '--user', default='')
-    parser.add_argument('-p', '--password', default='')
-    parser.add_argument('-k', '--key')
+    parser.add_argument('-u', '--users', nargs='*', default=[''])
+    parser.add_argument('-p', '--passwords', nargs='*', default=[''])
+    parser.add_argument('-k', '--keys', nargs='*')
     parser.add_argument('-s', '--servercert')
     parser.add_argument('-c', '--cacert')
     parser.add_argument('-d', '--docroot')
@@ -135,10 +138,10 @@ if __name__ == '__main__':
         print('Set docroot to %s' % args.docroot)
         os.chdir(args.docroot)
 
-    if not args.noauth and args.user == '' and args.password == '' and args.key is None:
-        args.user = random_string(8)
-        args.password = random_string(8)
-        print('Generated username and password -> %s : %s' % (args.user, args.password))
+    if not args.noauth and args.users == [''] and args.passwords == [''] and args.keys is None:
+        args.users = [random_string(8)]
+        args.passwords = [random_string(8)]
+        print('Generated username and password -> %s : %s' % (args.users[0], args.passwords[0]))
 
-    serve_https(args.address, args.port, args.noauth, args.user, args.password,
-                args.key, args.servercert, args.cacert)
+    serve_https(args.address, args.port, args.noauth, args.users, args.passwords,
+                args.keys, args.servercert, args.cacert)
