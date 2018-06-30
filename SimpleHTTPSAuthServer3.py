@@ -20,7 +20,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_GET(self):
-        if self.server.noauth:
+        if not self.server.keys:
             if __name__ == '__main__':
                 super().do_GET()
             return True
@@ -48,22 +48,28 @@ class AuthHandler(SimpleHTTPRequestHandler):
 class HTTPSAuthServer(HTTPServer):
     def __init__(self, server_address, RequestHandlerClass=AuthHandler, bind_and_activate=True):
         super().__init__(server_address, RequestHandlerClass, bind_and_activate)
-        self.noauth = False
+        self.keys = []
         self.servercert = None
         self.cacert = None
         self.protocol = 'HTTP'
         self.certreqs = ssl.CERT_NONE
 
-    def set_noauth(self, noauth):
-        self.noauth = noauth
+    def set_auth(self, users=None, passwords=None, keys=None):
+        if not (users or passwords or keys):
+            self.keys = []
+            return
 
-    def set_auth(self, users=[''], passwords=[''], keys=None):
-        if keys is None:
-            self.keys= []
-            for user, password in itertools.zip_longest(users, passwords, fillvalue=''):
-                self.keys.append(base64.b64encode(('%s:%s' % (user, password)).encode()).decode())
-        else:
-            self.keys = keys
+        if keys is not None:
+            self.keys += keys
+
+        if users is not None or passwords is not None:
+            accounts = itertools.zip_longest(
+                users or [''], passwords or [''], fillvalue=''
+            )
+            for user, password in accounts:
+                self.keys.append(
+                    base64.b64encode((user + ':' + password).encode()).decode()
+                )
 
     def set_certs(self, servercert=None, cacert=None):
         self.servercert = servercert
@@ -86,7 +92,9 @@ class HTTPSAuthServer(HTTPServer):
             print('CA certificate is specified. Now clients need cilent certificates.')
 
         sockname = self.socket.getsockname()
-        print('Serving %s on %s port %s ...' % (self.protocol, sockname[0], sockname[1]))
+        print('Serving {} on {} port {} ...'.format(
+            self.protocol, sockname[0], sockname[1])
+        )
 
         try:
             super().serve_forever(poll_interval)
@@ -94,10 +102,9 @@ class HTTPSAuthServer(HTTPServer):
             pass
 
 
-def serve_https(address='', port=8000, noauth=False, users=[''], passwords=[''],
-                keys=None, servercert=None, cacert=None, HandlerClass=AuthHandler):
+def serve_https(address='', port=8000, users=None, passwords=None, keys=None,
+                servercert=None, cacert=None, HandlerClass=AuthHandler):
     server = HTTPSAuthServer((address, port), HandlerClass)
-    server.set_noauth(noauth)
     server.set_auth(users, passwords, keys)
     server.set_certs(servercert, cacert)
     server.serve_forever()
@@ -119,10 +126,10 @@ if __name__ == '__main__':
 
     parser.add_argument('port', nargs='?', type=int, default=8000)
     parser.add_argument('-a', '--address', default='')
-    parser.add_argument('-n', '--noauth', action='store_true')
-    parser.add_argument('-u', '--users', nargs='*', default=[''])
-    parser.add_argument('-p', '--passwords', nargs='*', default=[''])
+    parser.add_argument('-u', '--users', nargs='*')
+    parser.add_argument('-p', '--passwords', nargs='*')
     parser.add_argument('-k', '--keys', nargs='*')
+    parser.add_argument('-r', '--random', type=int)
     parser.add_argument('-s', '--servercert')
     parser.add_argument('-c', '--cacert')
     parser.add_argument('-d', '--docroot')
@@ -138,10 +145,12 @@ if __name__ == '__main__':
         print('Set docroot to %s' % args.docroot)
         os.chdir(args.docroot)
 
-    if not args.noauth and args.users == [''] and args.passwords == [''] and args.keys is None:
-        args.users = [random_string(8)]
-        args.passwords = [random_string(8)]
-        print('Generated username and password -> %s : %s' % (args.users[0], args.passwords[0]))
+    if args.random is not None:
+        args.users = [random_string(args.random)]
+        args.passwords = [random_string(args.random)]
+        print('Generated username and password -> {} : {}'.format(
+            args.users[0], args.passwords[0])
+        )
 
-    serve_https(args.address, args.port, args.noauth, args.users, args.passwords,
+    serve_https(args.address, args.port, args.users, args.passwords,
                 args.keys, args.servercert, args.cacert)
