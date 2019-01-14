@@ -10,14 +10,11 @@ import string
 
 
 class AuthHandler(SimpleHTTPRequestHandler):
-    def do_AUTHHEAD(self):
+    def send_auth_request(self):
         self.send_response(http.client.UNAUTHORIZED)
         self.send_header('WWW-Authenticate', 'Basic realm=\"Authorization Required\"')
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-
-    def do_SUPERGET(self):
-        super().do_GET()
 
     def do_GET(self):
         if not self.server.keys:
@@ -27,7 +24,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
 
         auth_header = self.headers.get('Authorization')
         if auth_header is None:
-            self.do_AUTHHEAD()
+            self.send_auth_request()
             self.wfile.write('<h1>Authorization Required</h1>'.encode())
             print('no auth header received')
             return False
@@ -38,11 +35,14 @@ class AuthHandler(SimpleHTTPRequestHandler):
             return True
 
         else:
-            self.do_AUTHHEAD()
+            self.send_auth_request()
             self.wfile.write('<h1>Authorization Required</h1>'.encode())
             auth = re.sub('^Basic ', '', auth_header)
             print('Authentication failed! %s' % base64.b64decode(auth).decode())
             return False
+
+    def super_get(self):
+        super().do_GET()
 
 
 class HTTPSAuthServer(HTTPServer):
