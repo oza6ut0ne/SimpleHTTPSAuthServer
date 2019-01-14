@@ -102,9 +102,9 @@ class HTTPSAuthServer(HTTPServer):
             pass
 
 
-def serve_https(address='', port=8000, users=None, passwords=None, keys=None,
+def serve_https(bind='', port=8000, users=None, passwords=None, keys=None,
                 servercert=None, cacert=None, HandlerClass=AuthHandler):
-    server = HTTPSAuthServer((address, port), HandlerClass)
+    server = HTTPSAuthServer((bind, port), HandlerClass)
     server.set_auth(users, passwords, keys)
     server.set_certs(servercert, cacert)
     server.serve_forever()
@@ -125,7 +125,7 @@ if __name__ == '__main__':
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('port', nargs='?', type=int, default=8000)
-    parser.add_argument('-a', '--address', default='')
+    parser.add_argument('-b', '--bind', default='', metavar='ADDRESS')
     parser.add_argument('-u', '--users', nargs='*')
     parser.add_argument('-p', '--passwords', nargs='*')
     parser.add_argument('-k', '--keys', nargs='*')
@@ -152,5 +152,5 @@ if __name__ == '__main__':
             args.users[0], args.passwords[0])
         )
 
-    serve_https(args.address, args.port, args.users, args.passwords,
+    serve_https(args.bind, args.port, args.users, args.passwords,
                 args.keys, args.servercert, args.cacert)
