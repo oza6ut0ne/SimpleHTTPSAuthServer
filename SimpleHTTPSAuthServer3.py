@@ -5,6 +5,7 @@ import itertools
 import os
 import random
 import re
+from socketserver import ThreadingMixIn
 import ssl
 import string
 
@@ -102,9 +103,19 @@ class HTTPSAuthServer(HTTPServer):
             pass
 
 
+class ThreadedHTTPSAuthServer(ThreadingMixIn, HTTPSAuthServer):
+    pass
+
+
 def serve_https(bind='', port=8000, users=None, passwords=None, keys=None,
-                servercert=None, cacert=None, HandlerClass=AuthHandler):
-    server = HTTPSAuthServer((bind, port), HandlerClass)
+                servercert=None, cacert=None, threaded=False,
+                HandlerClass=AuthHandler):
+    if threaded:
+        server = ThreadedHTTPSAuthServer((bind, port), HandlerClass)
+        server.daemon_threads = True
+    else:
+        server = HTTPSAuthServer((bind, port), HandlerClass)
+
     server.set_auth(users, passwords, keys)
     server.set_certs(servercert, cacert)
     server.serve_forever()
@@ -126,6 +137,7 @@ if __name__ == '__main__':
 
     parser.add_argument('port', nargs='?', type=int, default=8000)
     parser.add_argument('-b', '--bind', default='', metavar='ADDRESS')
+    parser.add_argument('-t', '--threaded', action='store_true')
     parser.add_argument('-u', '--users', nargs='*')
     parser.add_argument('-p', '--passwords', nargs='*')
     parser.add_argument('-k', '--keys', nargs='*')
@@ -153,4 +165,4 @@ if __name__ == '__main__':
         )
 
     serve_https(args.bind, args.port, args.users, args.passwords,
-                args.keys, args.servercert, args.cacert)
+                args.keys, args.servercert, args.cacert, args.threaded)
