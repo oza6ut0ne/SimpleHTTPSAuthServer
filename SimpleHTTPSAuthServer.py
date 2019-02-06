@@ -1,18 +1,28 @@
-from http.server import SimpleHTTPRequestHandler, HTTPServer
 import base64
-import http
-import itertools
 import os
 import random
 import re
-from socketserver import ThreadingMixIn
+import sys
 import ssl
 import string
 
+if sys.version_info[0] == 2:
+    from BaseHTTPServer import HTTPServer as Server
+    from SimpleHTTPServer import SimpleHTTPRequestHandler as Handler
+    from SocketServer import ThreadingMixIn
+    from httplib import UNAUTHORIZED
+    from itertools import izip_longest as zip_longest
+elif sys.version_info[0] == 3:
+    from http.server import HTTPServer as Server
+    from http.server import SimpleHTTPRequestHandler as Handler
+    from socketserver import ThreadingMixIn
+    from http.client import UNAUTHORIZED
+    from itertools import zip_longest
 
-class AuthHandler(SimpleHTTPRequestHandler):
+
+class AuthHandler(Handler):
     def send_auth_request(self):
-        self.send_response(http.client.UNAUTHORIZED)
+        self.send_response(UNAUTHORIZED)
         self.send_header('WWW-Authenticate', 'Basic realm=\"Authorization Required\"')
         self.send_header('Content-type', 'text/html')
         self.end_headers()
@@ -20,7 +30,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if not self.server.keys:
             if __name__ == '__main__':
-                super().do_GET()
+                Handler.do_GET(self)
             return True
 
         auth_header = self.headers.get('Authorization')
@@ -32,7 +42,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
 
         elif auth_header[len('Basic '):] in self.server.keys:
             if __name__ == '__main__':
-                super().do_GET()
+                Handler.do_GET(self)
             return True
 
         else:
@@ -43,12 +53,12 @@ class AuthHandler(SimpleHTTPRequestHandler):
             return False
 
     def super_get(self):
-        super().do_GET()
+        Handler.do_GET(self)
 
 
-class HTTPSAuthServer(HTTPServer):
+class HTTPSAuthServer(Server):
     def __init__(self, server_address, RequestHandlerClass=AuthHandler, bind_and_activate=True):
-        super().__init__(server_address, RequestHandlerClass, bind_and_activate)
+        Server.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
         self.keys = []
         self.servercert = None
         self.cacert = None
@@ -64,7 +74,7 @@ class HTTPSAuthServer(HTTPServer):
             self.keys += keys
 
         if users is not None or passwords is not None:
-            accounts = itertools.zip_longest(
+            accounts = zip_longest(
                 users or [''], passwords or [''], fillvalue=''
             )
             for user, password in accounts:
@@ -98,7 +108,7 @@ class HTTPSAuthServer(HTTPServer):
         )
 
         try:
-            super().serve_forever(poll_interval)
+            Server.serve_forever(self, poll_interval)
         except KeyboardInterrupt:
             pass
 
