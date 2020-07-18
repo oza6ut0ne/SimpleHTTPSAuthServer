@@ -2,6 +2,7 @@ import base64
 import os
 import random
 import re
+import socket
 import sys
 import ssl
 import string
@@ -96,6 +97,13 @@ class HTTPSAuthServer(Server):
                                           cert_reqs=self.certreqs,
                                           ca_certs=self.cacert)
 
+    def server_bind(self):
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except:
+            pass
+        return Server.server_bind(self)
+
     def serve_forever(self, poll_interval=0.5):
         if self.servercert is None:
             print('No server certificate is specified. Dropped to HTTP.')
@@ -114,18 +122,23 @@ class HTTPSAuthServer(Server):
 
 
 class ThreadedHTTPSAuthServer(ThreadingMixIn, HTTPSAuthServer):
-    pass
+    daemon_threads = True
 
 
-def serve_https(bind='', port=8000, users=None, passwords=None, keys=None,
+def serve_https(bind=None, port=8000, users=None, passwords=None, keys=None,
                 servercert=None, cacert=None, threaded=False,
                 HandlerClass=AuthHandler):
     if threaded:
-        server = ThreadedHTTPSAuthServer((bind, port), HandlerClass)
-        server.daemon_threads = True
+        ServerClass = ThreadedHTTPSAuthServer
     else:
-        server = HTTPSAuthServer((bind, port), HandlerClass)
+        ServerClass = HTTPSAuthServer
 
+    addrinfo = socket.getaddrinfo(
+        bind, port, 0, socket.SOCK_STREAM, 0, socket.AI_PASSIVE)[0]
+    ServerClass.address_family = addrinfo[0]
+    addr = addrinfo[4]
+
+    server = ServerClass(addr, HandlerClass)
     server.set_auth(users, passwords, keys)
     server.set_certs(servercert, cacert)
     server.serve_forever()
@@ -146,7 +159,7 @@ if __name__ == '__main__':
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('port', nargs='?', type=int, default=8000)
-    parser.add_argument('-b', '--bind', default='', metavar='ADDRESS')
+    parser.add_argument('-b', '--bind', metavar='ADDRESS')
     parser.add_argument('-t', '--threaded', action='store_true')
     parser.add_argument('-u', '--users', nargs='*')
     parser.add_argument('-p', '--passwords', nargs='*')
