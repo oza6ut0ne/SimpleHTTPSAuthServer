@@ -10,13 +10,15 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='SimpleHTTPSAuthServer',
     version='1.1.0',
-    description='HTTPS server with Basic authentication and client certificate authentication',
+    description='HTTPS server with Basic authentication and client certificate authentication.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/oza6ut0ne/SimpleHTTPSAuthServer',
+    license='MIT',
     author='Ryota Okimatsu',
     author_email='oza6ut0ne@gmail.com',
     classifiers=[
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
