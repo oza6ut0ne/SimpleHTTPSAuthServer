@@ -20,6 +20,10 @@ elif sys.version_info[0] == 3:
     from http.client import UNAUTHORIZED
     from itertools import zip_longest
 
+ENV_USERS = 'SIMPLE_HTTPS_USERS'
+ENV_PASSWORDS = 'SIMPLE_HTTPS_PASSWORDS'
+ENV_KEYS = 'SIMPLE_HTTPS_KEYS'
+
 
 class AuthHandler(Handler):
     def send_auth_request(self):
@@ -58,8 +62,10 @@ class AuthHandler(Handler):
 
 
 class HTTPSAuthServer(Server):
-    def __init__(self, server_address, RequestHandlerClass=AuthHandler, bind_and_activate=True):
-        Server.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+    def __init__(self, server_address, RequestHandlerClass=AuthHandler,
+                 bind_and_activate=True):
+        Server.__init__(
+            self, server_address, RequestHandlerClass, bind_and_activate)
         self.keys = []
         self.servercert = None
         self.cacert = None
@@ -106,9 +112,10 @@ class HTTPSAuthServer(Server):
 
     def serve_forever(self, poll_interval=0.5):
         if self.servercert is None:
-            print('No server certificate is specified. Dropped to HTTP.')
+            print('No server certificate is specified. HTTPS is disabled.')
         elif self.cacert is not None:
-            print('CA certificate is specified. Now clients need cilent certificates.')
+            print('CA certificate is specified. '
+                  'Cilent certificate authentication is enabled.')
 
         sockname = self.socket.getsockname()
         print('Serving {} on {} port {} ...'.format(
@@ -151,6 +158,12 @@ def random_string(length):
         string.punctuation) for i in range(length)])
 
 
+def split_or_none(val):
+    if val is None:
+        return None
+    return val.split(' ')
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
@@ -161,9 +174,12 @@ if __name__ == '__main__':
     parser.add_argument('port', nargs='?', type=int, default=8000)
     parser.add_argument('-b', '--bind', metavar='ADDRESS')
     parser.add_argument('-t', '--threaded', action='store_true')
-    parser.add_argument('-u', '--users', nargs='*')
-    parser.add_argument('-p', '--passwords', nargs='*')
-    parser.add_argument('-k', '--keys', nargs='*')
+    parser.add_argument('-u', '--users', nargs='*',
+                        default=split_or_none(os.getenv(ENV_USERS)))
+    parser.add_argument('-p', '--passwords', nargs='*',
+                        default=split_or_none(os.getenv(ENV_PASSWORDS)))
+    parser.add_argument('-k', '--keys', nargs='*',
+                        default=split_or_none(os.getenv(ENV_KEYS)))
     parser.add_argument('-r', '--random', type=int)
     parser.add_argument('-s', '--servercert')
     parser.add_argument('-c', '--cacert')
