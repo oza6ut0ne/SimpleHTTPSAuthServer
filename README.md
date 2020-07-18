@@ -18,10 +18,10 @@ $ pip install SimpleHTTPSAuthServer
 $ python -m SimpleHTTPSAuthServer
 
 # Serve HTTPS.
-$ python -m SimpleHTTPSAuthServer -s /path/to/server/certificate.pem
+$ python -m SimpleHTTPSAuthServer -s /path/to/server/cert.pem
 
 # Serve HTTPS and enable client certificate authentication.
-$ python -m SimpleHTTPSAuthServer -s /path/to/server/certificate.pem -c /path/to/CA/certificate.pem
+$ python -m SimpleHTTPSAuthServer -s /path/to/server/cert.pem -c /path/to/CA/cert.pem
 
 # Enable Basic authentication.
 # Create user 'foo' with password 'spam', and user 'bar' with password 'ham'.
