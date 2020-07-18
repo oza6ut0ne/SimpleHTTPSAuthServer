@@ -1,4 +1,7 @@
 [![image](https://img.shields.io/pypi/pyversions/SimpleHTTPSAuthServer.svg)](https://pypi.org/project/SimpleHTTPSAuthServer/)
+[![Downloads](https://pepy.tech/badge/simplehttpsauthserver)](https://pypi.org/project/SimpleHTTPSAuthServer/)
+[![Downloads](https://pepy.tech/badge/simplehttpsauthserver/month)](https://pypi.org/project/SimpleHTTPSAuthServer/)
+[![Downloads](https://pepy.tech/badge/simplehttpsauthserver/week)](https://pypi.org/project/SimpleHTTPSAuthServer/)
 
 # SimpleHTTPSAuthServer
 
